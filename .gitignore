@@ -1,0 +1,13 @@
+# Python environments
+venv/
+__pycache__/
+*.pyc
+
+# Environment variables and Keys
+.env
+*.json 
+
+# Data files
+*.csv
+*.parquet
+
