@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   dbt:
     image: ghcr.io/dbt-labs/dbt-bigquery:1.7.latest
@@ -9,5 +7,4 @@ services:
     env_file:
       - .env
     working_dir: /usr/app/dbt
-    command: /bin/bash
-    tty: true
+    entrypoint: ["tail", "-f", "/dev/null"]
