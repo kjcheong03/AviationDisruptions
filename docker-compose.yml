@@ -1,6 +1,7 @@
 services:
   dbt:
     image: ghcr.io/dbt-labs/dbt-bigquery:1.7.latest
+    platform: linux/amd64
     container_name: dbt_aviation
     volumes:
       - ./dbt:/usr/app/dbt
