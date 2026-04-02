@@ -11,3 +11,8 @@ __pycache__/
 *.csv
 *.parquet
 
+
+.venv/
+.env
+dbt/gcp-service-account.json
+.DS_Store
