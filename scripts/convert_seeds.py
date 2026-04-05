@@ -28,7 +28,7 @@ try:
         'CancellationCode', 'WeatherDelay', 'NASDelay', 'CarrierDelay', 
         'SecurityDelay', 'LateAircraftDelay',
         # recommended for feature engineering
-        'DayOfWeek', 'Month', 'Distance', 'TaxiOut', 'TaxiIn'
+        'DayOfWeek', 'Month', 'Distance', 'TaxiOut', 'TaxiIn', 'Tail_Number'
     ]
     
     # Read, filter columns, and grab 1000 rows
