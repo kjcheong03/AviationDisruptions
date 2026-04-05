@@ -22,6 +22,7 @@ cleaned AS (
         -- identifiers and route dim
         Reporting_Airline AS airline_code,
         CAST(Flight_Number_Reporting_Airline AS INT64) AS flight_number,
+        Tail_Number AS tail_number,
         Origin AS origin_airport,
         Dest AS dest_airport,
         CAST(Distance AS FLOAT64) AS distance_miles,
