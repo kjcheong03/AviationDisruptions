@@ -1,13 +1,24 @@
 aviation_pipeline:
-  target: dev
+  target: dev_local
   outputs:
-    dev:
+    dev_docker:
       type: bigquery
       method: service-account
       project: is3107-aviation-pipeline
       dataset: analytics_staging
       threads: 4
       keyfile: /usr/app/dbt/gcp-service-account.json
+      location: US
+      priority: interactive
+      timeout_seconds: 300
+      retries: 1
+    
+    dev_local:
+      type: bigquery
+      method: service-account
+      project: is3107-aviation-pipeline
+      dataset: analytics_staging
+      keyfile: gcp-service-account.json
       location: US
       priority: interactive
       timeout_seconds: 300
