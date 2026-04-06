@@ -40,8 +40,22 @@ def read_opsnet_file(path: Path) -> pd.DataFrame:
 
     if suffix == ".csv":
         df = pd.read_csv(path, low_memory=False)
-    elif suffix in {".xlsx", ".xls"}:
-        df = pd.read_excel(path)
+    elif suffix == ".xlsx":
+        df = pd.read_excel(path, engine="openpyxl")
+    elif suffix == ".xls":
+        # FAA OPSNET exports HTML disguised as .xls — try xlrd first, fall back to HTML
+        try:
+            df = pd.read_excel(path, engine="xlrd")
+        except Exception:
+            tables = pd.read_html(path, header=[0, 1, 2])
+            df = tables[0]
+            # Flatten multi-level columns — keep only the deepest meaningful level
+            df.columns = [
+                str(c[-1]).strip() if not str(c[-1]).startswith("Unnamed") else str(c[-2]).strip()
+                for c in df.columns
+            ]
+            # Drop fully empty columns
+            df = df.dropna(axis=1, how="all")
     else:
         raise ValueError(f"Unsupported OPSNET file type: {path}")
 

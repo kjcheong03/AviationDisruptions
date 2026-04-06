@@ -16,3 +16,8 @@ __pycache__/
 .env
 dbt/gcp-service-account.json
 .DS_Store
+
+.ipynb_checkpoints/
+
+# Claude Code
+.claude/
