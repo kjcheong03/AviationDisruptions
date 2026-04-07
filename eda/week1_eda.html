@@ -8688,18 +8688,7 @@ SecurityDelay           52339.0
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>  Fetching ATL ...
-  Fetching DFW ...
-  Fetching DEN ...
-  Fetching ORD ...
-  Fetching LAX ...
-  Fetching JFK ...
-  Fetching SFO ...
-  Fetching SEA ...
-  Fetching LAS ...
-  Fetching MCO ...
-
-Total weather rows: 7,440
+<pre>Loaded cached weather: 7,440 rows
 </pre>
 </div>
 </div>
@@ -8945,6 +8934,727 @@ WEEK 1 EDA SUMMARY
    Cancellation rate: 2.51%
    Distribution is right-skewed — most flights on time, long tail of severe delays.
 ============================================================
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<hr/>
+<h2 id="5.-Recommended-Data-Cleaning-Steps-(Derived-from-EDA)">5. Recommended Data Cleaning Steps (Derived from EDA)<a class="anchor-link" href="#5.-Recommended-Data-Cleaning-Steps-(Derived-from-EDA)">¶</a></h2><p>Based on our EDA findings, the following cleaning steps should be applied during the dbt transformation layer (Role A) or pre-processing before ML modeling (Role C).</p>
+<h3 id="5.1-BTS-Flight-Data-Cleaning">5.1 BTS Flight Data Cleaning<a class="anchor-link" href="#5.1-BTS-Flight-Data-Cleaning">¶</a></h3>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [15]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># ---------------------------------------------------------------</span>
+<span class="c1"># STEP 1: Drop junk / irrelevant columns</span>
+<span class="c1"># ---------------------------------------------------------------</span>
+<span class="c1"># EDA Finding: 110 columns, but our ERD only uses ~15-20.</span>
+<span class="c1"># "Unnamed: 109" is a trailing-comma artifact from the BTS CSV export.</span>
+<span class="c1"># Diversion columns (Div1-Div5) are almost entirely NULL and not in our ERD.</span>
+
+<span class="n">cols_to_drop</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">bts</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"Div"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">c</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"Unnamed"</span><span class="p">)]</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Dropping </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">cols_to_drop</span><span class="p">)</span><span class="si">}</span><span class="s2"> junk/diversion columns:"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">cols_to_drop</span><span class="p">[:</span><span class="mi">5</span><span class="p">]</span><span class="si">}</span><span class="s2"> ... (and </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">cols_to_drop</span><span class="p">)</span><span class="o">-</span><span class="mi">5</span><span class="si">}</span><span class="s2"> more)"</span><span class="p">)</span>
+
+<span class="n">bts_clean</span> <span class="o">=</span> <span class="n">bts</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">cols_to_drop</span><span class="p">)</span>
+
+<span class="c1"># Keep only columns relevant to our ERD (fact_flights)</span>
+<span class="n">ERD_COLUMNS</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">"FlightDate"</span><span class="p">,</span> <span class="s2">"Reporting_Airline"</span><span class="p">,</span> <span class="s2">"Flight_Number_Reporting_Airline"</span><span class="p">,</span>
+    <span class="s2">"Origin"</span><span class="p">,</span> <span class="s2">"Dest"</span><span class="p">,</span>
+    <span class="s2">"CRSDepTime"</span><span class="p">,</span> <span class="s2">"DepTime"</span><span class="p">,</span> <span class="s2">"DepDelay"</span><span class="p">,</span> <span class="s2">"DepDelayMinutes"</span><span class="p">,</span>
+    <span class="s2">"CRSArrTime"</span><span class="p">,</span> <span class="s2">"ArrTime"</span><span class="p">,</span> <span class="s2">"ArrDelay"</span><span class="p">,</span> <span class="s2">"ArrDelayMinutes"</span><span class="p">,</span>
+    <span class="s2">"Cancelled"</span><span class="p">,</span> <span class="s2">"CancellationCode"</span><span class="p">,</span>
+    <span class="s2">"WeatherDelay"</span><span class="p">,</span> <span class="s2">"NASDelay"</span><span class="p">,</span> <span class="s2">"CarrierDelay"</span><span class="p">,</span> <span class="s2">"SecurityDelay"</span><span class="p">,</span> <span class="s2">"LateAircraftDelay"</span><span class="p">,</span>
+    <span class="c1"># Extra useful columns for feature engineering</span>
+    <span class="s2">"DayOfWeek"</span><span class="p">,</span> <span class="s2">"Month"</span><span class="p">,</span> <span class="s2">"Distance"</span><span class="p">,</span> <span class="s2">"TaxiOut"</span><span class="p">,</span> <span class="s2">"TaxiIn"</span><span class="p">,</span>
+<span class="p">]</span>
+<span class="n">available_erd</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">ERD_COLUMNS</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">bts_clean</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+<span class="n">bts_clean</span> <span class="o">=</span> <span class="n">bts_clean</span><span class="p">[</span><span class="n">available_erd</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Retained </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">bts_clean</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span><span class="si">}</span><span class="s2"> ERD-relevant columns (down from </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">bts</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Columns: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">bts_clean</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Dropping 47 junk/diversion columns:
+  ['Diverted', 'DivAirportLandings', 'DivReachedDest', 'DivActualElapsedTime', 'DivArrDelay'] ... (and 42 more)
+
+Retained 25 ERD-relevant columns (down from 113)
+Columns: ['FlightDate', 'Reporting_Airline', 'Flight_Number_Reporting_Airline', 'Origin', 'Dest', 'CRSDepTime', 'DepTime', 'DepDelay', 'DepDelayMinutes', 'CRSArrTime', 'ArrTime', 'ArrDelay', 'ArrDelayMinutes', 'Cancelled', 'CancellationCode', 'WeatherDelay', 'NASDelay', 'CarrierDelay', 'SecurityDelay', 'LateAircraftDelay', 'DayOfWeek', 'Month', 'Distance', 'TaxiOut', 'TaxiIn']
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [16]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># ---------------------------------------------------------------</span>
+<span class="c1"># STEP 2: Handle cancelled flights separately</span>
+<span class="c1"># ---------------------------------------------------------------</span>
+<span class="c1"># EDA Finding: 2.51% cancellation rate (45,045 flights).</span>
+<span class="c1"># Cancelled flights have NULL DepTime, ArrTime, DepDelay, ArrDelay</span>
+<span class="c1"># because the flight never operated.</span>
+<span class="c1">#</span>
+<span class="c1"># Decision: Separate cancelled flights into their own set.</span>
+<span class="c1"># For delay prediction models, we only train on flights that actually flew.</span>
+<span class="c1"># Cancellation prediction is a separate binary classification task.</span>
+
+<span class="n">cancelled_mask</span> <span class="o">=</span> <span class="n">bts_clean</span><span class="p">[</span><span class="s2">"Cancelled"</span><span class="p">]</span> <span class="o">==</span> <span class="mf">1.0</span>
+<span class="n">n_cancelled</span> <span class="o">=</span> <span class="n">cancelled_mask</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+<span class="n">n_operated</span> <span class="o">=</span> <span class="p">(</span><span class="o">~</span><span class="n">cancelled_mask</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Cancelled flights : </span><span class="si">{</span><span class="n">n_cancelled</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">n_cancelled</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">bts_clean</span><span class="p">)</span><span class="o">*</span><span class="mi">100</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%)"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Operated flights  : </span><span class="si">{</span><span class="n">n_operated</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">n_operated</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">bts_clean</span><span class="p">)</span><span class="o">*</span><span class="mi">100</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%)"</span><span class="p">)</span>
+
+<span class="c1"># For delay modeling: keep only operated flights</span>
+<span class="n">bts_operated</span> <span class="o">=</span> <span class="n">bts_clean</span><span class="p">[</span><span class="o">~</span><span class="n">cancelled_mask</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="c1"># For cancellation modeling: keep all flights</span>
+<span class="n">bts_cancel</span> <span class="o">=</span> <span class="n">bts_clean</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">bts_operated: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">bts_operated</span><span class="p">)</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> rows (for delay prediction)"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"bts_cancel:   </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">bts_cancel</span><span class="p">)</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> rows (for cancellation prediction)"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Cancelled flights : 45,045 (2.51%)
+Operated flights  : 1,752,336 (97.49%)
+
+bts_operated: 1,752,336 rows (for delay prediction)
+bts_cancel:   1,797,381 rows (for cancellation prediction)
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [17]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># ---------------------------------------------------------------</span>
+<span class="c1"># STEP 3: Fill delay cause NULLs with 0</span>
+<span class="c1"># ---------------------------------------------------------------</span>
+<span class="c1"># EDA Finding: WeatherDelay, NASDelay, etc. are 78.4% NULL.</span>
+<span class="c1"># These are NULL because the flight was NOT delayed by that cause.</span>
+<span class="c1"># BTS only populates them when the flight IS delayed.</span>
+<span class="c1"># Correct interpretation: NULL = 0 minutes of that delay type.</span>
+
+<span class="n">delay_cause_cols</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"WeatherDelay"</span><span class="p">,</span> <span class="s2">"NASDelay"</span><span class="p">,</span> <span class="s2">"CarrierDelay"</span><span class="p">,</span>
+                    <span class="s2">"SecurityDelay"</span><span class="p">,</span> <span class="s2">"LateAircraftDelay"</span><span class="p">]</span>
+<span class="n">available_causes</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">delay_cause_cols</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">bts_operated</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Before filling NULLs with 0:"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">bts_operated</span><span class="p">[</span><span class="n">available_causes</span><span class="p">]</span><span class="o">.</span><span class="n">isnull</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">to_string</span><span class="p">())</span>
+
+<span class="n">bts_operated</span><span class="p">[</span><span class="n">available_causes</span><span class="p">]</span> <span class="o">=</span> <span class="n">bts_operated</span><span class="p">[</span><span class="n">available_causes</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">After filling NULLs with 0:"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">bts_operated</span><span class="p">[</span><span class="n">available_causes</span><span class="p">]</span><span class="o">.</span><span class="n">isnull</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">to_string</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Rationale: BTS only records delay causes when a delay occurs."</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"A NULL means 'no delay from this cause' = 0 minutes."</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Before filling NULLs with 0:
+WeatherDelay         1363720
+NASDelay             1363720
+CarrierDelay         1363720
+SecurityDelay        1363720
+LateAircraftDelay    1363720
+
+After filling NULLs with 0:
+WeatherDelay         0
+NASDelay             0
+CarrierDelay         0
+SecurityDelay        0
+LateAircraftDelay    0
+
+Rationale: BTS only records delay causes when a delay occurs.
+A NULL means 'no delay from this cause' = 0 minutes.
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [18]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># ---------------------------------------------------------------</span>
+<span class="c1"># STEP 4: Drop remaining rows with missing core fields</span>
+<span class="c1"># ---------------------------------------------------------------</span>
+<span class="c1"># EDA Finding: ~2.4% of operated flights still have NULL DepDelay/ArrDelay.</span>
+<span class="c1"># These are likely data quality issues (e.g. diverted flights that</span>
+<span class="c1"># returned, partial records). Safe to drop since &lt;2.5% of data.</span>
+
+<span class="n">core_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"DepDelay"</span><span class="p">,</span> <span class="s2">"ArrDelay"</span><span class="p">,</span> <span class="s2">"DepTime"</span><span class="p">,</span> <span class="s2">"ArrTime"</span><span class="p">]</span>
+<span class="n">available_core</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">core_fields</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">bts_operated</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+
+<span class="n">before</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">bts_operated</span><span class="p">)</span>
+<span class="n">bts_operated</span> <span class="o">=</span> <span class="n">bts_operated</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="n">available_core</span><span class="p">)</span>
+<span class="n">after</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">bts_operated</span><span class="p">)</span>
+<span class="n">dropped</span> <span class="o">=</span> <span class="n">before</span> <span class="o">-</span> <span class="n">after</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Dropped </span><span class="si">{</span><span class="n">dropped</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> rows with missing core delay/time fields"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  (</span><span class="si">{</span><span class="n">dropped</span><span class="o">/</span><span class="n">before</span><span class="o">*</span><span class="mi">100</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">% of operated flights)"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Remaining: </span><span class="si">{</span><span class="n">after</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> rows"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Dropped 4,514 rows with missing core delay/time fields
+  (0.26% of operated flights)
+  Remaining: 1,747,822 rows
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [19]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># ---------------------------------------------------------------</span>
+<span class="c1"># STEP 5: Cap extreme delay outliers</span>
+<span class="c1"># ---------------------------------------------------------------</span>
+<span class="c1"># EDA Finding: Max departure delay = 3,777 min (63 hours!), max arrival = 3,803 min.</span>
+<span class="c1"># These are real but ultra-rare events (mechanical failures, diversions).</span>
+<span class="c1"># They will skew ML models if left uncapped.</span>
+<span class="c1">#</span>
+<span class="c1"># Decision: Cap at 720 min (12 hours). Flights delayed &gt;12h are</span>
+<span class="c1"># operationally equivalent to cancellations for passenger impact.</span>
+
+<span class="n">CAP_MINUTES</span> <span class="o">=</span> <span class="mi">720</span>
+
+<span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"DepDelay"</span><span class="p">,</span> <span class="s2">"DepDelayMinutes"</span><span class="p">,</span> <span class="s2">"ArrDelay"</span><span class="p">,</span> <span class="s2">"ArrDelayMinutes"</span><span class="p">]:</span>
+    <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">bts_operated</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">continue</span>
+    <span class="n">n_extreme</span> <span class="o">=</span> <span class="p">(</span><span class="n">bts_operated</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span> <span class="o">&gt;</span> <span class="n">CAP_MINUTES</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="n">pct</span> <span class="o">=</span> <span class="n">n_extreme</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">bts_operated</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+    <span class="n">bts_operated</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">bts_operated</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="o">-</span><span class="n">CAP_MINUTES</span><span class="p">,</span> <span class="n">CAP_MINUTES</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2">: capped </span><span class="si">{</span><span class="n">n_extreme</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> extreme values (</span><span class="si">{</span><span class="n">pct</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">%) to +/-</span><span class="si">{</span><span class="n">CAP_MINUTES</span><span class="si">}</span><span class="s2"> min"</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">New delay ranges:"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  DepDelay: [</span><span class="si">{</span><span class="n">bts_operated</span><span class="p">[</span><span class="s1">'DepDelay'</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">bts_operated</span><span class="p">[</span><span class="s1">'DepDelay'</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">]"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  ArrDelay: [</span><span class="si">{</span><span class="n">bts_operated</span><span class="p">[</span><span class="s1">'ArrDelay'</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">bts_operated</span><span class="p">[</span><span class="s1">'ArrDelay'</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">]"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>  DepDelay: capped 2,227 extreme values (0.127%) to +/-720 min
+  DepDelayMinutes: capped 2,227 extreme values (0.127%) to +/-720 min
+  ArrDelay: capped 2,222 extreme values (0.127%) to +/-720 min
+  ArrDelayMinutes: capped 2,222 extreme values (0.127%) to +/-720 min
+
+New delay ranges:
+  DepDelay: [-66, 720]
+  ArrDelay: [-91, 720]
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [20]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># ---------------------------------------------------------------</span>
+<span class="c1"># STEP 6: Cast data types correctly</span>
+<span class="c1"># ---------------------------------------------------------------</span>
+<span class="c1"># EDA Finding: Cancelled is float (1.00/0.00) — should be boolean.</span>
+<span class="c1"># FlightDate is string — should be datetime.</span>
+<span class="c1"># CRSDepTime is integer (e.g. 1430) — needs conversion for ERD timestamp.</span>
+
+<span class="c1"># 6a. Cancelled -&gt; boolean</span>
+<span class="n">bts_operated</span><span class="p">[</span><span class="s2">"Cancelled"</span><span class="p">]</span> <span class="o">=</span> <span class="n">bts_operated</span><span class="p">[</span><span class="s2">"Cancelled"</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">bool</span><span class="p">)</span>
+<span class="n">bts_cancel</span><span class="p">[</span><span class="s2">"Cancelled"</span><span class="p">]</span> <span class="o">=</span> <span class="n">bts_cancel</span><span class="p">[</span><span class="s2">"Cancelled"</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">bool</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Cancelled column cast to boolean"</span><span class="p">)</span>
+
+<span class="c1"># 6b. FlightDate -&gt; datetime</span>
+<span class="n">bts_operated</span><span class="p">[</span><span class="s2">"FlightDate"</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">bts_operated</span><span class="p">[</span><span class="s2">"FlightDate"</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"FlightDate cast to datetime: </span><span class="si">{</span><span class="n">bts_operated</span><span class="p">[</span><span class="s1">'FlightDate'</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+<span class="c1"># 6c. Demonstrate CRSDepTime integer -&gt; time string conversion</span>
+<span class="c1"># (This should be done in dbt for the ERD scheduled_dep_time TIMESTAMP)</span>
+<span class="n">sample_times</span> <span class="o">=</span> <span class="n">bts_operated</span><span class="p">[</span><span class="s2">"CRSDepTime"</span><span class="p">]</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<span class="n">converted</span> <span class="o">=</span> <span class="n">sample_times</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">zfill</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">converted</span> <span class="o">=</span> <span class="n">converted</span><span class="o">.</span><span class="n">str</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="s2">":"</span> <span class="o">+</span> <span class="n">converted</span><span class="o">.</span><span class="n">str</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">CRSDepTime conversion example (for dbt to implement):"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Raw:       </span><span class="si">{</span><span class="n">sample_times</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Converted: </span><span class="si">{</span><span class="n">converted</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  NOTE: Role A should stitch FlightDate + CRSDepTime into a TIMESTAMP in dbt"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Cancelled column cast to boolean
+FlightDate cast to datetime: datetime64[ns]
+
+CRSDepTime conversion example (for dbt to implement):
+  Raw:       [856, 856, 856, 856, 856]
+  Converted: ['08:56', '08:56', '08:56', '08:56', '08:56']
+  NOTE: Role A should stitch FlightDate + CRSDepTime into a TIMESTAMP in dbt
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [21]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># ---------------------------------------------------------------</span>
+<span class="c1"># STEP 7: Generate the flight_id primary key (per ERD)</span>
+<span class="c1"># ---------------------------------------------------------------</span>
+<span class="c1"># ERD Definition: CONCAT(FlightDate, '-', Reporting_Airline, '-',</span>
+<span class="c1">#                        FlightNum, '-', Origin, '-', CRSDepTime)</span>
+<span class="c1"># This must be unique. Let's verify uniqueness after construction.</span>
+
+<span class="n">bts_operated</span><span class="p">[</span><span class="s2">"flight_id"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">bts_operated</span><span class="p">[</span><span class="s2">"FlightDate"</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"%Y-%m-</span><span class="si">%d</span><span class="s2">"</span><span class="p">)</span>
+    <span class="o">+</span> <span class="s2">"-"</span> <span class="o">+</span> <span class="n">bts_operated</span><span class="p">[</span><span class="s2">"Reporting_Airline"</span><span class="p">]</span>
+    <span class="o">+</span> <span class="s2">"-"</span> <span class="o">+</span> <span class="n">bts_operated</span><span class="p">[</span><span class="s2">"Flight_Number_Reporting_Airline"</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="o">+</span> <span class="s2">"-"</span> <span class="o">+</span> <span class="n">bts_operated</span><span class="p">[</span><span class="s2">"Origin"</span><span class="p">]</span>
+    <span class="o">+</span> <span class="s2">"-"</span> <span class="o">+</span> <span class="n">bts_operated</span><span class="p">[</span><span class="s2">"CRSDepTime"</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">n_unique</span> <span class="o">=</span> <span class="n">bts_operated</span><span class="p">[</span><span class="s2">"flight_id"</span><span class="p">]</span><span class="o">.</span><span class="n">nunique</span><span class="p">()</span>
+<span class="n">n_total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">bts_operated</span><span class="p">)</span>
+<span class="n">n_dupes</span> <span class="o">=</span> <span class="n">n_total</span> <span class="o">-</span> <span class="n">n_unique</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"flight_id generated: </span><span class="si">{</span><span class="n">n_unique</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> unique / </span><span class="si">{</span><span class="n">n_total</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> total"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Duplicates: </span><span class="si">{</span><span class="n">n_dupes</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">n_dupes</span><span class="o">/</span><span class="n">n_total</span><span class="o">*</span><span class="mi">100</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">%)"</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">n_dupes</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Sample duplicates (gate returns / reused flight numbers):"</span><span class="p">)</span>
+    <span class="n">dupes</span> <span class="o">=</span> <span class="n">bts_operated</span><span class="p">[</span><span class="n">bts_operated</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">"flight_id"</span><span class="p">],</span> <span class="n">keep</span><span class="o">=</span><span class="kc">False</span><span class="p">)]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">dupes</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">"flight_id"</span><span class="p">)[[</span><span class="s2">"flight_id"</span><span class="p">,</span> <span class="s2">"DepDelay"</span><span class="p">,</span> <span class="s2">"ArrDelay"</span><span class="p">]]</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Action: Drop duplicates, keeping the first occurrence."</span><span class="p">)</span>
+    <span class="n">bts_operated</span> <span class="o">=</span> <span class="n">bts_operated</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">"flight_id"</span><span class="p">],</span> <span class="n">keep</span><span class="o">=</span><span class="s2">"first"</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"After dedup: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">bts_operated</span><span class="p">)</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> rows"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>flight_id generated: 1,747,822 unique / 1,747,822 total
+Duplicates: 0 (0.000%)
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h3 id="5.2-Weather-Data-Cleaning">5.2 Weather Data Cleaning<a class="anchor-link" href="#5.2-Weather-Data-Cleaning">¶</a></h3>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [22]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># ---------------------------------------------------------------</span>
+<span class="c1"># STEP 8: Parse weather timestamps &amp; generate weather_id</span>
+<span class="c1"># ---------------------------------------------------------------</span>
+<span class="c1"># EDA Finding: Weather data has 0% missing — clean source.</span>
+<span class="c1"># But we need to extract date_id and hour_id for joining to flights.</span>
+
+<span class="n">weather_clean</span> <span class="o">=</span> <span class="n">weather</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+<span class="n">weather_clean</span><span class="p">[</span><span class="s2">"time_parsed"</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">weather_clean</span><span class="p">[</span><span class="s2">"time"</span><span class="p">])</span>
+<span class="n">weather_clean</span><span class="p">[</span><span class="s2">"date_id"</span><span class="p">]</span> <span class="o">=</span> <span class="n">weather_clean</span><span class="p">[</span><span class="s2">"time_parsed"</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">date</span>
+<span class="n">weather_clean</span><span class="p">[</span><span class="s2">"hour_id"</span><span class="p">]</span> <span class="o">=</span> <span class="n">weather_clean</span><span class="p">[</span><span class="s2">"time_parsed"</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">hour</span>
+
+<span class="c1"># Generate weather_id per ERD: CONCAT(airport_id, '-', date_id, '-', hour_id)</span>
+<span class="n">weather_clean</span><span class="p">[</span><span class="s2">"weather_id"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">weather_clean</span><span class="p">[</span><span class="s2">"airport_code"</span><span class="p">]</span>
+    <span class="o">+</span> <span class="s2">"-"</span> <span class="o">+</span> <span class="n">weather_clean</span><span class="p">[</span><span class="s2">"date_id"</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="o">+</span> <span class="s2">"-"</span> <span class="o">+</span> <span class="n">weather_clean</span><span class="p">[</span><span class="s2">"hour_id"</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Weather timestamps parsed successfully"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Date range: </span><span class="si">{</span><span class="n">weather_clean</span><span class="p">[</span><span class="s1">'date_id'</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">weather_clean</span><span class="p">[</span><span class="s1">'date_id'</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Hours: </span><span class="si">{</span><span class="n">weather_clean</span><span class="p">[</span><span class="s1">'hour_id'</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">weather_clean</span><span class="p">[</span><span class="s1">'hour_id'</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  weather_id unique: </span><span class="si">{</span><span class="n">weather_clean</span><span class="p">[</span><span class="s1">'weather_id'</span><span class="p">]</span><span class="o">.</span><span class="n">nunique</span><span class="p">()</span><span class="si">}</span><span class="s2"> / </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">weather_clean</span><span class="p">)</span><span class="si">}</span><span class="s2"> rows"</span><span class="p">)</span>
+<span class="n">weather_clean</span><span class="p">[[</span><span class="s2">"weather_id"</span><span class="p">,</span> <span class="s2">"airport_code"</span><span class="p">,</span> <span class="s2">"date_id"</span><span class="p">,</span> <span class="s2">"hour_id"</span><span class="p">,</span> <span class="s2">"temperature_2m"</span><span class="p">,</span> <span class="s2">"wind_speed_10m"</span><span class="p">]]</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Weather timestamps parsed successfully
+  Date range: 2024-07-01 to 2024-07-31
+  Hours: 0 to 23
+  weather_id unique: 7440 / 7440 rows
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child jp-OutputArea-executeResult">
+<div class="jp-OutputPrompt jp-OutputArea-prompt">Out[22]:</div>
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html" tabindex="0">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead>
+<tr style="text-align: right;">
+<th></th>
+<th>weather_id</th>
+<th>airport_code</th>
+<th>date_id</th>
+<th>hour_id</th>
+<th>temperature_2m</th>
+<th>wind_speed_10m</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>0</th>
+<td>ATL-2024-07-01-0</td>
+<td>ATL</td>
+<td>2024-07-01</td>
+<td>0</td>
+<td>31.6</td>
+<td>4.7</td>
+</tr>
+<tr>
+<th>1</th>
+<td>ATL-2024-07-01-1</td>
+<td>ATL</td>
+<td>2024-07-01</td>
+<td>1</td>
+<td>29.0</td>
+<td>6.0</td>
+</tr>
+<tr>
+<th>2</th>
+<td>ATL-2024-07-01-2</td>
+<td>ATL</td>
+<td>2024-07-01</td>
+<td>2</td>
+<td>29.0</td>
+<td>5.5</td>
+</tr>
+<tr>
+<th>3</th>
+<td>ATL-2024-07-01-3</td>
+<td>ATL</td>
+<td>2024-07-01</td>
+<td>3</td>
+<td>28.1</td>
+<td>5.3</td>
+</tr>
+<tr>
+<th>4</th>
+<td>ATL-2024-07-01-4</td>
+<td>ATL</td>
+<td>2024-07-01</td>
+<td>4</td>
+<td>27.4</td>
+<td>6.9</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [23]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># ---------------------------------------------------------------</span>
+<span class="c1"># STEP 9: Rename weather columns to match ERD</span>
+<span class="c1"># ---------------------------------------------------------------</span>
+<span class="c1"># EDA Finding: Open-Meteo column names differ from our ERD schema.</span>
+<span class="c1"># Rename to match dim_weather table definition.</span>
+
+<span class="n">weather_rename</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"temperature_2m"</span><span class="p">:</span> <span class="s2">"temperature_c"</span><span class="p">,</span>
+    <span class="s2">"wind_speed_10m"</span><span class="p">:</span> <span class="s2">"wind_speed_knots"</span><span class="p">,</span>    <span class="c1"># already in knots (wind_speed_unit=kn)</span>
+    <span class="s2">"precipitation"</span><span class="p">:</span> <span class="s2">"precipitation_mm"</span><span class="p">,</span>
+    <span class="s2">"cloudcover_low"</span><span class="p">:</span> <span class="s2">"cloud_cover_low_pct"</span><span class="p">,</span>
+    <span class="s2">"cloudcover"</span><span class="p">:</span> <span class="s2">"cloud_cover_total_pct"</span><span class="p">,</span>
+    <span class="s2">"airport_code"</span><span class="p">:</span> <span class="s2">"airport_id"</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">weather_clean</span> <span class="o">=</span> <span class="n">weather_clean</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">weather_rename</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Renamed weather columns to ERD schema:"</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">old</span><span class="p">,</span> <span class="n">new</span> <span class="ow">in</span> <span class="n">weather_rename</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">old</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">new</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Final weather columns: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">weather_clean</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Renamed weather columns to ERD schema:
+  temperature_2m -&gt; temperature_c
+  wind_speed_10m -&gt; wind_speed_knots
+  precipitation -&gt; precipitation_mm
+  cloudcover_low -&gt; cloud_cover_low_pct
+  cloudcover -&gt; cloud_cover_total_pct
+  airport_code -&gt; airport_id
+
+Final weather columns: ['time', 'temperature_c', 'wind_speed_knots', 'precipitation_mm', 'cloud_cover_total_pct', 'cloud_cover_low_pct', 'airport_id', 'time_parsed', 'date_id', 'hour_id', 'weather_id']
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h3 id="5.3-Cleaning-Summary-&amp;-Validation">5.3 Cleaning Summary &amp; Validation<a class="anchor-link" href="#5.3-Cleaning-Summary-&amp;-Validation">¶</a></h3>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [24]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># ---------------------------------------------------------------</span>
+<span class="c1"># FINAL VALIDATION: Verify cleaned data is ready for modeling</span>
+<span class="c1"># ---------------------------------------------------------------</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"="</span> <span class="o">*</span> <span class="mi">65</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"CLEANING PIPELINE SUMMARY"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"="</span> <span class="o">*</span> <span class="mi">65</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="si">{</span><span class="s1">'STEP'</span><span class="si">:</span><span class="s2">&lt;45</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'ACTION'</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"-"</span> <span class="o">*</span> <span class="mi">65</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'1. Drop junk columns'</span><span class="si">:</span><span class="s2">&lt;45</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'110 -&gt; '</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">available_erd</span><span class="p">))</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s1">' columns'</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'2. Separate cancelled flights'</span><span class="si">:</span><span class="s2">&lt;45</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">n_cancelled</span><span class="si">:</span><span class="s1">,</span><span class="si">}</span><span class="s1"> cancelled set aside'</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'3. Fill delay cause NULLs with 0'</span><span class="si">:</span><span class="s2">&lt;45</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'78% NULL -&gt; 0 (no delay = 0 min)'</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'4. Drop rows with missing core fields'</span><span class="si">:</span><span class="s2">&lt;45</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">dropped</span><span class="si">:</span><span class="s1">,</span><span class="si">}</span><span class="s1"> rows dropped (~2.4%)'</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'5. Cap extreme outliers at +/-720 min'</span><span class="si">:</span><span class="s2">&lt;45</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'Prevents skew from 63h delays'</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'6. Cast data types'</span><span class="si">:</span><span class="s2">&lt;45</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'bool, datetime, int conversions'</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'7. Generate flight_id primary key'</span><span class="si">:</span><span class="s2">&lt;45</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">n_dupes</span><span class="si">:</span><span class="s1">,</span><span class="si">}</span><span class="s1"> duplicates removed'</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'8. Parse weather timestamps'</span><span class="si">:</span><span class="s2">&lt;45</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'date_id + hour_id extracted'</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'9. Rename weather cols to ERD schema'</span><span class="si">:</span><span class="s2">&lt;45</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'6 columns renamed'</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="si">{</span><span class="s1">'CLEANED DATASET SIZES'</span><span class="si">:}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  BTS (for delay modeling)    : </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">bts_operated</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;10,</span><span class="si">}</span><span class="s2"> rows x </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">bts_operated</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span><span class="si">}</span><span class="s2"> cols"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  BTS (for cancel modeling)   : </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">bts_cancel</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;10,</span><span class="si">}</span><span class="s2"> rows x </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">bts_cancel</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span><span class="si">}</span><span class="s2"> cols"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Weather                     : </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">weather_clean</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;10,</span><span class="si">}</span><span class="s2"> rows x </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">weather_clean</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span><span class="si">}</span><span class="s2"> cols"</span><span class="p">)</span>
+
+<span class="c1"># Final NULL check</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">FINAL NULL CHECK (bts_operated):"</span><span class="p">)</span>
+<span class="n">remaining_nulls</span> <span class="o">=</span> <span class="n">bts_operated</span><span class="o">.</span><span class="n">isnull</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+<span class="n">remaining_nulls</span> <span class="o">=</span> <span class="n">remaining_nulls</span><span class="p">[</span><span class="n">remaining_nulls</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">remaining_nulls</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"  No NULLs remaining in core columns!"</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">remaining_nulls</span><span class="o">.</span><span class="n">to_string</span><span class="p">())</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">FINAL NULL CHECK (weather_clean):"</span><span class="p">)</span>
+<span class="n">weather_nulls</span> <span class="o">=</span> <span class="n">weather_clean</span><span class="o">.</span><span class="n">isnull</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+<span class="n">weather_nulls</span> <span class="o">=</span> <span class="n">weather_nulls</span><span class="p">[</span><span class="n">weather_nulls</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">weather_nulls</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"  No NULLs remaining!"</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">weather_nulls</span><span class="o">.</span><span class="n">to_string</span><span class="p">())</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span> <span class="o">+</span> <span class="s2">"="</span> <span class="o">*</span> <span class="mi">65</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"NOTE FOR ROLE A (dbt):"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"  These cleaning steps should be implemented as dbt models in"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"  the staging layer (stg_flights, stg_weather) so they are"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"  reproducible, version-controlled, and applied to the full"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"  historical dataset (Feb 2022 - Jan 2026)."</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"="</span> <span class="o">*</span> <span class="mi">65</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>=================================================================
+CLEANING PIPELINE SUMMARY
+=================================================================
+
+STEP                                          ACTION
+-----------------------------------------------------------------
+1. Drop junk columns                          110 -&gt; 25 columns
+2. Separate cancelled flights                 45,045 cancelled set aside
+3. Fill delay cause NULLs with 0              78% NULL -&gt; 0 (no delay = 0 min)
+4. Drop rows with missing core fields         4,514 rows dropped (~2.4%)
+5. Cap extreme outliers at +/-720 min         Prevents skew from 63h delays
+6. Cast data types                            bool, datetime, int conversions
+7. Generate flight_id primary key             0 duplicates removed
+8. Parse weather timestamps                   date_id + hour_id extracted
+9. Rename weather cols to ERD schema          6 columns renamed
+
+CLEANED DATASET SIZES
+  BTS (for delay modeling)    :  1,747,822 rows x 26 cols
+  BTS (for cancel modeling)   :  1,797,381 rows x 25 cols
+  Weather                     :      7,440 rows x 11 cols
+
+FINAL NULL CHECK (bts_operated):
+CancellationCode    1747822
+
+FINAL NULL CHECK (weather_clean):
+  No NULLs remaining!
+
+=================================================================
+NOTE FOR ROLE A (dbt):
+  These cleaning steps should be implemented as dbt models in
+  the staging layer (stg_flights, stg_weather) so they are
+  reproducible, version-controlled, and applied to the full
+  historical dataset (Feb 2022 - Jan 2026).
+=================================================================
 </pre>
 </div>
 </div>
