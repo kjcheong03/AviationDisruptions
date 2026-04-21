@@ -46,9 +46,17 @@ def _run(sql: str) -> Optional[pd.DataFrame]:
         return None
 
 
-def _where(months=None, airlines=None, airports=None, extra="Cancelled = 0 AND DepDelay IS NOT NULL") -> str:
-    """Build a WHERE clause from sidebar filter selections."""
+def _where(months=None, airlines=None, airports=None, date_range=None,
+           extra="Cancelled = 0 AND DepDelay IS NOT NULL") -> str:
+    """Build a WHERE clause from sidebar filter selections.
+    date_range: tuple of (start_date, end_date) — python date / datetime / 'YYYY-MM-DD' string.
+    """
     clauses = [extra] if extra else []
+    if date_range:
+        start, end = date_range
+        clauses.append(
+            f"CAST(FlightDate AS DATE) BETWEEN DATE('{start}') AND DATE('{end}')"
+        )
     if months:
         month_list = ", ".join(str(m) for m in months)
         clauses.append(f"EXTRACT(MONTH FROM CAST(FlightDate AS DATE)) IN ({month_list})")
@@ -63,22 +71,8 @@ def _where(months=None, airlines=None, airports=None, extra="Cancelled = 0 AND D
 
 # ── Loaders ───────────────────────────────────────────────────────────────────
 
-def load_kpis(months=None, airlines=None, airports=None) -> Optional[dict]:
-    w = _where(months, airlines, airports, extra="DepDelay IS NOT NULL")
-    sql = f"""
-    SELECT
-      COUNT(*)                                             AS total_flights,
-      COUNTIF(Cancelled = 1.0)                            AS cancelled,
-      COUNTIF(DepDelay > 15 AND Cancelled = 0)            AS delayed,
-      SAFE_DIVIDE(
-        COUNTIF(DepDelay > 15 AND Cancelled = 0),
-        COUNTIF(Cancelled = 0)
-      )                                                   AS delay_rate
-    FROM {BTS}
-    {w.replace("DepDelay IS NOT NULL AND ", "") if w else ""}
-    """
-    # simpler version
-    w2 = _where(months, airlines, airports, extra=None)
+def load_kpis(months=None, airlines=None, airports=None, date_range=None) -> Optional[dict]:
+    w = _where(months, airlines, airports, date_range, extra=None)
     sql = f"""
     SELECT
       COUNTIF(Cancelled != 1.0)                                       AS total_flights,
@@ -89,11 +83,7 @@ def load_kpis(months=None, airlines=None, airports=None) -> Optional[dict]:
         COUNTIF(Cancelled != 1.0)
       )                                                               AS delay_rate
     FROM {BTS}
-    {"WHERE " + " AND ".join([
-        *([ "EXTRACT(MONTH FROM CAST(FlightDate AS DATE)) IN (" + ", ".join(str(m) for m in months) + ")" ] if months else []),
-        *([ "Reporting_Airline IN (" + ", ".join(f"'{a}'" for a in airlines) + ")" ] if airlines else []),
-        *([ "Origin IN (" + ", ".join(f"'{a}'" for a in airports) + ")" ] if airports else []),
-    ]) if any([months, airlines, airports]) else ""}
+    {w}
     """
     df = _run(sql)
     if df is None or df.empty:
@@ -102,8 +92,8 @@ def load_kpis(months=None, airlines=None, airports=None) -> Optional[dict]:
     return {k: (int(r[k]) if k != "delay_rate" else float(r[k])) for k in r.index}
 
 
-def load_delay_by_hour(months=None, airlines=None, airports=None) -> Optional[pd.DataFrame]:
-    w = _where(months, airlines, airports)
+def load_delay_by_hour(months=None, airlines=None, airports=None, date_range=None) -> Optional[pd.DataFrame]:
+    w = _where(months, airlines, airports, date_range)
     sql = f"""
     SELECT
       CAST(FLOOR(CRSDepTime / 100) AS INT64)        AS hour,
@@ -119,9 +109,9 @@ def load_delay_by_hour(months=None, airlines=None, airports=None) -> Optional[pd
     return _run(sql)
 
 
-def load_delay_by_airline(months=None, airports=None) -> Optional[pd.DataFrame]:
+def load_delay_by_airline(months=None, airports=None, date_range=None) -> Optional[pd.DataFrame]:
     # note: no airline filter here — we want to compare all airlines
-    w = _where(months, None, airports)
+    w = _where(months, None, airports, date_range)
     sql = f"""
     SELECT
       Reporting_Airline                              AS airline_code,
@@ -137,8 +127,8 @@ def load_delay_by_airline(months=None, airports=None) -> Optional[pd.DataFrame]:
     return _run(sql)
 
 
-def load_delay_by_airport(months=None, airlines=None) -> Optional[pd.DataFrame]:
-    w = _where(months, airlines, None)
+def load_delay_by_airport(months=None, airlines=None, date_range=None) -> Optional[pd.DataFrame]:
+    w = _where(months, airlines, None, date_range)
     sql = f"""
     SELECT
       Origin                                         AS airport,
@@ -154,8 +144,8 @@ def load_delay_by_airport(months=None, airlines=None) -> Optional[pd.DataFrame]:
     return _run(sql)
 
 
-def load_monthly_trend(airlines=None, airports=None) -> Optional[pd.DataFrame]:
-    w = _where(None, airlines, airports)
+def load_monthly_trend(airlines=None, airports=None, date_range=None, months=None) -> Optional[pd.DataFrame]:
+    w = _where(months, airlines, airports, date_range)
     sql = f"""
     SELECT
       EXTRACT(YEAR  FROM CAST(FlightDate AS DATE)) AS year,
@@ -178,8 +168,8 @@ def load_monthly_trend(airlines=None, airports=None) -> Optional[pd.DataFrame]:
     return df
 
 
-def load_delay_causes(months=None, airlines=None, airports=None) -> Optional[pd.DataFrame]:
-    w = _where(months, airlines, airports, extra="Cancelled != 1.0")
+def load_delay_causes(months=None, airlines=None, airports=None, date_range=None) -> Optional[pd.DataFrame]:
+    w = _where(months, airlines, airports, date_range, extra="Cancelled != 1.0")
     sql = f"""
     SELECT
       SUM(CarrierDelay)      AS Carrier,
@@ -196,8 +186,9 @@ def load_delay_causes(months=None, airlines=None, airports=None) -> Optional[pd.
     return df.melt(var_name="Cause", value_name="Total Min").dropna()
 
 
-def load_delay_distribution_sample(months=None, airlines=None, airports=None, n: int = 80_000) -> Optional[pd.DataFrame]:
-    w = _where(months, airlines, airports)
+def load_delay_distribution_sample(months=None, airlines=None, airports=None,
+                                     date_range=None, n: int = 80_000) -> Optional[pd.DataFrame]:
+    w = _where(months, airlines, airports, date_range)
     sql = f"""
     SELECT DepDelay
     FROM {BTS}
