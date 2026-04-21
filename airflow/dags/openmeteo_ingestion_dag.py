@@ -67,6 +67,9 @@ def fetch_and_load_weather(**context) -> None:
         raise ValueError(f"No weather data fetched for {target_date}")
 
     combined = pd.concat(all_dfs, ignore_index=True)
+    combined["time"] = pd.to_datetime(combined["time"], utc=True)
+    combined["extract_start_date"] = pd.to_datetime(combined["extract_start_date"])
+    combined["extract_end_date"] = pd.to_datetime(combined["extract_end_date"])
     load_dataframe_to_bigquery(combined, "raw_weather", "openmeteo_raw", write_mode="APPEND")
     print(f"Loaded {len(combined):,} rows for {target_date}")
 

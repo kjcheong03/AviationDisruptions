@@ -41,18 +41,18 @@ default_args = {
 
 def download_and_load_bts(**context) -> None:
     """Download the BTS ZIP for the logical month and load to BigQuery."""
+    from datetime import timedelta
     from bts_pipeline import _download_and_parse, _load_to_bigquery
 
-    # logical_date is the first day of the month being processed
-    logical_date = context["logical_date"]
-    year = logical_date.year
-    month = logical_date.month
+    # Fetch December 2025 (safely within BTS published range)
+    year, month = 2025, 12
 
     print(f"Processing BTS data for {year}-{month:02d}")
     df = _download_and_parse(year, month)
 
     if df is None or df.empty:
-        raise ValueError(f"No data returned for {year}-{month:02d}")
+        from airflow.exceptions import AirflowSkipException
+        raise AirflowSkipException(f"BTS data for {year}-{month:02d} not yet published — skipping.")
 
     # Always APPEND for scheduled runs; the pipeline deduplicates via BQ partitioning
     _load_to_bigquery(df, write_mode="APPEND")

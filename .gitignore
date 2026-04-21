@@ -22,14 +22,14 @@ dbt/gcp-service-account.json
 # Claude Code
 .claude/
 
-# dbt artifacts
-dbt/logs/
-dbt/target/
-dbt/dbt_packages/
-
 # Large model artifacts
 *.joblib
 models/risk_scores.parquet
 models/centrality_metrics.csv
 models/feature_cols.json
 models/feature_medians.json
+
+# dbt artifacts
+dbt/logs/
+dbt/target/
+dbt/dbt_packages/

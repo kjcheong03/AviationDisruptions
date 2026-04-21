@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -7,16 +8,26 @@ from google.oauth2 import service_account
 PROJECT_ID = "is3107-aviation-pipeline"
 # Resolve relative to the project root (one level up from this file's directory)
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
-SERVICE_ACCOUNT_PATH = _PROJECT_ROOT / "dbt" / "gcp-service-account.json"
+_FALLBACK_SA_PATH = _PROJECT_ROOT / "dbt" / "gcp-service-account.json"
 
 
 def get_bigquery_client() -> bigquery.Client:
-    if not SERVICE_ACCOUNT_PATH.exists():
+    # Prefer the standard GCP env var (set in Docker / Airflow containers).
+    # Fall back to the hardcoded local path for direct script execution.
+    sa_path_str = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+    if sa_path_str:
+        sa_path = Path(sa_path_str)
+    else:
+        sa_path = _FALLBACK_SA_PATH
+
+    if not sa_path.exists():
         raise FileNotFoundError(
-            f"Service account file not found at: {SERVICE_ACCOUNT_PATH}"
+            f"Service account file not found at: {sa_path}\n"
+            "Set GOOGLE_APPLICATION_CREDENTIALS or place the key at "
+            f"{_FALLBACK_SA_PATH}"
         )
     credentials = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_PATH
+        str(sa_path)
     )
     return bigquery.Client(project=PROJECT_ID, credentials=credentials)
 
