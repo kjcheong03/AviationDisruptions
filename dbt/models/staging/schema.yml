@@ -1,0 +1,52 @@
+version: 2
+
+models:
+  - name: stg_flights
+    description: Cleaned BTS flight records at the flight grain.
+    columns:
+      - name: flight_date
+        tests:
+          - not_null
+      - name: airline_code
+        tests:
+          - not_null
+      - name: origin_airport
+        tests:
+          - not_null
+      - name: dest_airport
+        tests:
+          - not_null
+
+  - name: stg_weather
+    description: Unified hourly weather records from AWC, METAR, and Open-Meteo.
+    columns:
+      - name: weather_id
+        description: Unique identifier for each airport-hour weather observation.
+        tests:
+          - unique
+          - not_null
+      - name: date_id
+        tests:
+          - not_null
+      - name: hour_id
+        tests:
+          - not_null
+      - name: airport_id
+        tests:
+          - not_null
+
+  - name: fct_flights_weather
+    description: Joined flight and weather fact table used for downstream analytics and ML.
+    columns:
+      - name: date_id
+        tests:
+          - not_null
+      - name: hour_id
+        tests:
+          - not_null
+      - name: origin_airport_id
+        tests:
+          - not_null
+      - name: dest_airport_id
+        tests:
+          - not_null
