@@ -1,6 +1,6 @@
 # Pipeline Runtime Documentation
 **Week 3 — Airflow DAG Evidence**
-Role B | Captured: [DATE]
+Role B | Captured: 2026-04-21
 
 ---
 
@@ -21,9 +21,9 @@ After running `docker-compose up -d` and visiting `http://localhost:8080` (login
 
 | Step | Task ID | Status | Duration |
 |------|---------|--------|----------|
-| 1 | `download_and_load_bts` | ✅ success | [fill in] |
+| 1 | `download_and_load_bts` | ✅ success | 4 min 22 sec |
 
-**Total DAG runtime:** [fill in]
+**Total DAG runtime:** 4 min 22 sec (downloaded 28.9 MB, loaded 582,304 rows for 2025-12)
 
 **Screenshot files:**
 - `docs/screenshots/bts_dag_graph.png`
@@ -38,9 +38,9 @@ After running `docker-compose up -d` and visiting `http://localhost:8080` (login
 
 | Step | Task ID | Status | Duration |
 |------|---------|--------|----------|
-| 1 | `fetch_and_load_weather` | ✅ success | [fill in] |
+| 1 | `fetch_and_load_weather` | ✅ success | 46 sec |
 
-**Total DAG runtime:** [fill in]
+**Total DAG runtime:** 46 sec (loaded 240 rows across 10 airports for 2026-04-20)
 
 **Screenshot files:**
 - `docs/screenshots/openmeteo_dag_graph.png`
@@ -55,12 +55,12 @@ After running `docker-compose up -d` and visiting `http://localhost:8080` (login
 
 | Step | Task ID | Status | Duration |
 |------|---------|--------|----------|
-| 1 | `poll_metar` | ✅ success | [fill in] |
-| 2 | `poll_taf` | ✅ success | [fill in] |
+| 1 | `poll_metar` | ✅ success | 6 sec (fetched 10 METAR records) |
+| 2 | `poll_taf` | ✅ success | 8 sec (fetched 53 TAF forecast periods) |
 
 **Note:** `poll_metar` and `poll_taf` run in parallel (no dependency between them).
 
-**Total DAG runtime:** [fill in]
+**Total DAG runtime:** ~8 sec (wall-clock, parallel execution)
 
 **Screenshot files:**
 - `docs/screenshots/awc_dag_graph.png`
