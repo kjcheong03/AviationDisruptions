@@ -4,6 +4,11 @@ models:
   - name: stg_flights
     description: Cleaned BTS flight records at the flight grain.
     columns:
+      - name: flight_id
+        description: Null-safe identifier for each flight record in staging.
+        tests:
+          - unique
+          - not_null
       - name: flight_date
         tests:
           - not_null
@@ -38,6 +43,10 @@ models:
   - name: fct_flights_weather
     description: Joined flight and weather fact table used for downstream analytics and ML.
     columns:
+      - name: flight_id
+        tests:
+          - unique
+          - not_null
       - name: date_id
         tests:
           - not_null

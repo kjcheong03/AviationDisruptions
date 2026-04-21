@@ -1,5 +1,4 @@
-with source AS (
-    -- SELECT * FROM {{ ref('bts_sample' ) }} -- removed sample reference
+with source_raw AS (
     SELECT -- add columns required
         flightdate AS FlightDate,
         CAST(EXTRACT(DAYOFWEEK FROM CAST(flightdate AS DATE)) AS INT64) AS DayOfWeek,
@@ -25,15 +24,21 @@ with source AS (
     FROM {{ source('raw_aviation', 'bts_raw') }}
 ),
 
+source AS (
+    -- Safety net: collapse exact duplicate raw rows before downstream feature engineering.
+    SELECT DISTINCT *
+    FROM source_raw
+),
+
 cleaned AS (
     SELECT 
         -- produce unique flight id for EACH FLIGHT 
         CONCAT(
-            CAST(FlightDate AS STRING), '_', 
-            Reporting_Airline, '_', 
-            CAST(Flight_Number_Reporting_Airline AS STRING), '_', 
-            Origin, '_', 
-            CAST(CRSDepTime AS STRING)
+            COALESCE(CAST(FlightDate AS STRING), 'NA'), '_', 
+            COALESCE(Reporting_Airline, 'NA'), '_', 
+            COALESCE(CAST(Flight_Number_Reporting_Airline AS STRING), 'NA'), '_', 
+            COALESCE(Origin, 'NA'), '_', 
+            COALESCE(CAST(CRSDepTime AS STRING), 'NA')
         ) AS flight_id,
 
         -- date and time
