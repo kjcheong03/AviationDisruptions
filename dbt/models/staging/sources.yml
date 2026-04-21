@@ -1,0 +1,17 @@
+version: 2
+
+sources:
+  - name: raw_aviation
+    database: is3107-aviation-pipeline
+    schema: raw_aviation
+    tables:
+      - name: bts_raw
+      - name: opsnet_raw
+
+  - name: raw_weather
+    database: is3107-aviation-pipeline
+    schema: raw_weather
+    tables:
+      - name: openmeteo_raw
+      - name: metar_raw
+      - name: taf_raw

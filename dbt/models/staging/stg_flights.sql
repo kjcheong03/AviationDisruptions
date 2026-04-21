@@ -1,5 +1,28 @@
 with source AS (
-    SELECT * FROM {{ ref('bts_sample' ) }}
+    -- SELECT * FROM {{ ref('bts_sample' ) }} -- removed sample reference
+    SELECT -- add columns required
+        flightdate AS FlightDate,
+        CAST(EXTRACT(DAYOFWEEK FROM CAST(flightdate AS DATE)) AS INT64) AS DayOfWeek,
+        reporting_airline AS Reporting_Airline,
+        flight_number_reporting_airline AS Flight_Number_Reporting_Airline,
+        tail_number AS Tail_Number,
+        origin AS Origin,
+        dest AS Dest,
+        crsdeptime AS CRSDepTime,
+        month AS Month,
+        distance AS Distance,
+        cancelled AS Cancelled,
+        cancellationcode AS CancellationCode,
+        CAST(NULL AS FLOAT64) AS TaxiOut, -- not available in current (rawnet data)
+        CAST(NULL AS FLOAT64) AS TaxiIn, -- missing taxiIn handled
+        depdelay AS DepDelayMinutes,
+        arrdelay AS ArrDelayMinutes,
+        weatherdelay AS WeatherDelay,
+        nasdelay AS NASDelay,
+        carrierdelay AS CarrierDelay,
+        securitydelay AS SecurityDelay,
+        lateaircraftdelay AS LateAircraftDelay
+    FROM {{ source('raw_aviation', 'bts_raw') }}
 ),
 
 cleaned AS (
@@ -28,10 +51,14 @@ cleaned AS (
         CAST(Distance AS FLOAT64) AS distance_miles,
         
         -- status of flight
-        CAST(Cancelled AS BOOLEAN) AS is_cancelled,
+        CASE
+            WHEN Cancelled = 1 THEN TRUE
+            WHEN Cancelled = 0 THEN FALSE
+            ELSE NULL
+        END AS is_cancelled,
         CancellationCode AS cancellation_code,
 
-        -- other metrics
+        -- other metrics -- not available at the moment
         CAST(TaxiOut AS FLOAT64) AS taxi_out_mins,
         CAST(TaxiIn AS FLOAT64) AS taxi_in_mins,
         
