@@ -101,7 +101,12 @@ def _download_and_parse(year: int, month: int) -> pd.DataFrame | None:
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
-        with zipfile.ZipFile(io.BytesIO(response.content)) as zf:
+        try:
+            zf_obj = zipfile.ZipFile(io.BytesIO(response.content))
+        except zipfile.BadZipFile:
+            print(f"Bad ZIP (data likely not published yet for {year}-{month:02d}).")
+            return None
+        with zf_obj as zf:
             # Extract the first CSV found in the archive
             csv_names = [n for n in zf.namelist() if n.lower().endswith(".csv")]
             if not csv_names:
