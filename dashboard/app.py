@@ -254,20 +254,162 @@ hr {{ border-color: {C["border"]} !important; margin: .6rem 0 1.4rem 0; }}
 [data-testid="stDataFrame"] {{ border-radius: 12px; overflow: hidden; border: 1px solid {C["border"]}; }}
 
 /* Button */
-.stButton > button {{
-    background: {C["blue"]}; color: #ffffff; border: none;
-    border-radius: 8px; font-weight: 600; font-size: .85rem;
-    padding: .5rem 1.3rem; letter-spacing: .02em;
-    box-shadow: 0 1px 4px rgba(2,132,199,.3);
-    transition: background .15s ease;
+.stButton > button,
+[data-testid="stFormSubmitButton"] > button,
+.stFormSubmitButton > button {{
+    background: {C["blue"]} !important;
+    color: #ffffff !important; border: none !important;
+    border-radius: 10px !important; font-weight: 600 !important; font-size: .95rem !important;
+    padding: .7rem 1.8rem !important; letter-spacing: .03em !important;
+    box-shadow: 0 2px 6px rgba(2,132,199,.25) !important;
+    transition: background .15s ease, box-shadow .15s ease !important;
 }}
-.stButton > button:hover {{ background: #0369a1; color: #ffffff; }}
+.stButton > button:hover,
+[data-testid="stFormSubmitButton"] > button:hover,
+.stFormSubmitButton > button:hover {{
+    background: #0369a1 !important;
+    box-shadow: 0 3px 10px rgba(2,132,199,.35) !important;
+}}
+
+/* Number input — premium styling with solid unified border */
+[data-testid="stNumberInput"] > div {{
+    border: 1.5px solid {C["border"]} !important;
+    border-radius: 10px !important;
+    background: {C["card"]} !important;
+    overflow: hidden;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}}
+[data-testid="stNumberInput"] > div:focus-within {{
+    border-color: {C["blue"]} !important;
+    box-shadow: 0 0 0 3px rgba(2,132,199,.12) !important;
+}}
+[data-testid="stNumberInput"] input {{
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    font-weight: 500 !important;
+    font-size: .95rem !important;
+    color: {C["text"]} !important;
+    padding: .55rem .8rem !important;
+    box-shadow: none !important;
+}}
+[data-testid="stNumberInput"] input:focus {{
+    outline: none !important;
+    box-shadow: none !important;
+}}
+[data-testid="stNumberInput"] button {{
+    background: {C["card"]} !important;
+    border: none !important;
+    border-left: 1.5px solid {C["border"]} !important;
+    border-radius: 0 !important;
+    color: {C["muted"]} !important;
+}}
+[data-testid="stNumberInput"] button:hover {{
+    background: {C["blue"]} !important; color: #fff !important;
+    border-left-color: {C["blue"]} !important;
+}}
+
+/* Selectbox — match number-input styling so Route fields align visually */
+[data-testid="stSelectbox"] > div > div {{
+    border: 1.5px solid {C["border"]} !important;
+    border-radius: 10px !important;
+    background: {C["card"]} !important;
+    min-height: 42px;
+}}
+[data-testid="stSelectbox"] > div > div:focus-within {{
+    border-color: {C["blue"]} !important;
+    box-shadow: 0 0 0 3px rgba(2,132,199,.12) !important;
+}}
+/* Ensure selectbox + number input fill their column equally */
+[data-testid="stSelectbox"],
+[data-testid="stNumberInput"] {{ width: 100% !important; }}
+
+/* Help-tooltip (? icon) — strip border/background on icon AND every ancestor wrapper */
+[data-testid="stTooltipIcon"],
+[data-testid="stTooltipIcon"] *,
+[data-testid="stTooltipHoverTarget"],
+[data-testid="stTooltipHoverTarget"] *,
+[data-baseweb="tooltip"],
+[data-baseweb="tooltip"] *,
+[class*="tooltip"],
+[class*="Tooltip"] {{
+    border: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-top: none !important;
+    border-bottom: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}}
+[data-testid="stTooltipIcon"] svg,
+[data-testid="stTooltipHoverTarget"] svg {{
+    color: {C["muted"]} !important;
+}}
+[data-testid="stTooltipIcon"]::before,
+[data-testid="stTooltipIcon"]::after,
+[data-testid="stTooltipHoverTarget"]::before,
+[data-testid="stTooltipHoverTarget"]::after {{
+    content: none !important;
+    display: none !important;
+    border: none !important;
+    background: transparent !important;
+}}
+/* Kill the vertical separator some widgets inject before the tooltip on any labeled widget */
+[data-testid="stWidgetLabel"],
+[data-testid="stWidgetLabel"] > div,
+[data-testid="stWidgetLabel"] * ,
+label[data-baseweb="checkbox"],
+label[data-baseweb="checkbox"] > div,
+label[data-baseweb="checkbox"] *,
+div[data-baseweb="form-control-container"],
+div[data-baseweb="form-control-container"] * {{
+    border-left: none !important;
+    border-right: none !important;
+}}
+
+/* Checkbox — align box vertically with label text, tight spacing */
+[data-testid="stCheckbox"] > label,
+label[data-baseweb="checkbox"] {{
+    display: flex !important;
+    align-items: center !important;
+    gap: .25rem !important;
+    min-height: 42px;
+}}
+[data-testid="stCheckbox"] [role="checkbox"],
+label[data-baseweb="checkbox"] span[role="checkbox"],
+label[data-baseweb="checkbox"] > span:first-child {{
+    margin: 0 !important;
+    padding: 0 !important;
+    align-self: center !important;
+}}
+[data-testid="stCheckbox"] label p,
+label[data-baseweb="checkbox"] div,
+label[data-baseweb="checkbox"] > div:last-child {{
+    margin: 0 !important;
+    padding-left: 0 !important;
+    line-height: 1.4 !important;
+}}
 
 /* Section title */
 .section-title {{
     font-size: .72rem; font-weight: 700; color: {C["muted"]};
     text-transform: uppercase; letter-spacing: .1em;
     margin-bottom: .7rem; margin-top: .2rem;
+}}
+/* Extra breathing room between sections inside a form (e.g. Predict tab) */
+[data-testid="stForm"] .section-title {{
+    margin-top: 2rem !important;
+    margin-bottom: 1.1rem !important;
+    padding-top: .6rem;
+    border-top: 1px solid {C["border"]};
+}}
+[data-testid="stForm"] .section-title:first-of-type {{
+    margin-top: .3rem !important;
+    padding-top: 0;
+    border-top: none;
+}}
+[data-testid="stForm"] [data-testid="stFormSubmitButton"] {{
+    margin-top: 2rem;
 }}
 
 /* Stat row / cards */
@@ -446,11 +588,6 @@ st.markdown(f"""
   </div>
   <div style='display:flex;align-items:center;gap:1.5rem'>
     <div>{_bq_badge}</div>
-    <div style='text-align:right;font-size:.72rem;color:{_muted};line-height:1.8;
-                border-left:1px solid {_border};padding-left:1.5rem'>
-      <span style='font-weight:600;color:{C["text"]}'>Gradient Boosting</span> · AUC 0.73<br>
-      345 airports · 6,506 routes
-    </div>
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -1872,94 +2009,115 @@ with tab_predict:
                            sorted(AIRPORT_COORDS.keys()))
         cent_lookup = cent_df.set_index("airport") if not cent_df.empty else None
 
-        st.markdown("<div class='section-title'>Enter flight details — get a real-time disruption risk score</div>",
+        st.markdown("<div class='section-title'>Enter flight details to get a disruption risk score</div>",
                     unsafe_allow_html=True)
-        st.caption("All fields pre-filled with dataset medians. Change only what you care about. "
-                   "Origin/destination auto-populate PageRank and Betweenness from the network model.")
+        st.caption("Fields are pre-filled with typical values — change only what you care about. "
+                   "Flight distance is computed automatically from the selected airports.")
+
+        def _haversine_miles(a: str, b: str) -> float:
+            from math import radians, sin, cos, asin, sqrt
+            if a not in AIRPORT_COORDS or b not in AIRPORT_COORDS:
+                return float(medians.get("Distance", 679))
+            lat1, lon1 = AIRPORT_COORDS[a]
+            lat2, lon2 = AIRPORT_COORDS[b]
+            dlat = radians(lat2 - lat1); dlon = radians(lon2 - lon1)
+            h = sin(dlat/2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon/2)**2
+            return 2 * 3958.8 * asin(sqrt(h))
 
         with st.form("predict_form"):
             # ── Row 1 — schedule ──
             st.markdown("<div class='section-title'>Schedule</div>", unsafe_allow_html=True)
-            r1c1, r1c2, r1c3, r1c4 = st.columns(4)
+            r1c1, r1c2, r1c3 = st.columns(3)
             with r1c1:
                 in_month = st.selectbox(
                     "Month", list(range(1, 13)),
                     index=int(medians.get("flight_month", 7)) - 1,
-                    format_func=lambda m: pd.Timestamp(2024, m, 1).strftime("%b"),
+                    format_func=lambda m: pd.Timestamp(2024, m, 1).strftime("%B"),
                 )
             with r1c2:
-                dow_labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+                dow_labels = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
                 in_dow = st.selectbox(
                     "Day of week", list(range(7)),
                     index=int(medians.get("day_of_week", 3)) % 7,
                     format_func=lambda d: dow_labels[d],
                 )
             with r1c3:
-                in_hour = st.slider("Scheduled dep. hour", 0, 23,
-                                     value=int(medians.get("scheduled_dep_hour", 13)))
-            with r1c4:
-                in_dist = st.number_input("Distance (miles)", min_value=50, max_value=5000, step=50,
-                                            value=int(medians.get("Distance", 679)))
+                in_hour = st.number_input(
+                    "Departure hour (0–23)", min_value=0, max_value=23, step=1,
+                    value=int(medians.get("scheduled_dep_hour", 13)),
+                )
 
             # ── Row 2 — route ──
             st.markdown("<div class='section-title'>Route</div>", unsafe_allow_html=True)
-            r2c1, r2c2 = st.columns(2)
+            r2c1, r2c2 = st.columns([1, 1], gap="medium")
             default_o = "ATL" if "ATL" in airport_options else airport_options[0]
             default_d = "LAX" if "LAX" in airport_options else airport_options[min(1, len(airport_options) - 1)]
             with r2c1:
-                in_origin = st.selectbox("Origin airport", airport_options,
+                in_origin = st.selectbox("Departing from", airport_options,
                                            index=airport_options.index(default_o))
             with r2c2:
-                in_dest = st.selectbox("Destination airport", airport_options,
+                in_dest = st.selectbox("Flying to", airport_options,
                                          index=airport_options.index(default_d))
 
             # ── Row 3 — weather ──
-            st.markdown("<div class='section-title'>Weather (Open-Meteo / METAR observations)</div>",
+            st.markdown("<div class='section-title'>Weather conditions</div>",
                         unsafe_allow_html=True)
             r3c1, r3c2, r3c3 = st.columns(3)
             with r3c1:
-                in_temp = st.slider("Temperature (°C)", -30.0, 45.0,
-                                     value=float(medians.get("temperature_c", 24.5)), step=0.5)
-                in_precip = st.slider("Precipitation (mm/hr)", 0.0, 40.0,
-                                       value=float(medians.get("precipitation_mm", 0.0)), step=0.1)
+                in_temp = st.number_input(
+                    "Temperature (°C)", min_value=-40.0, max_value=50.0, step=0.5,
+                    value=float(medians.get("temperature_c", 24.5)),
+                )
+                in_precip = st.number_input(
+                    "Rainfall (mm per hour)", min_value=0.0, max_value=50.0, step=0.1,
+                    value=float(medians.get("precipitation_mm", 0.0)),
+                )
             with r3c2:
-                in_wind = st.slider("Wind speed (knots)", 0.0, 60.0,
-                                     value=float(medians.get("wind_speed_knots", 5.0)), step=0.5)
-                in_wind_delta = st.slider("Wind-speed delta (hour-over-hour)", -30.0, 30.0,
-                                           value=float(medians.get("wind_speed_delta", 0.0)), step=0.5)
+                in_wind = st.number_input(
+                    "Wind speed (knots)", min_value=0.0, max_value=80.0, step=0.5,
+                    value=float(medians.get("wind_speed_knots", 5.0)),
+                )
+                in_wind_delta = st.number_input(
+                    "Wind change vs. last hour (knots)", min_value=-40.0, max_value=40.0, step=0.5,
+                    value=float(medians.get("wind_speed_delta", 0.0)),
+                    help="Positive = wind picking up; negative = easing off.",
+                )
             with r3c3:
-                in_cloud_total = st.slider("Total cloud cover (%)", 0, 100,
-                                            value=int(medians.get("cloud_cover_total_pct", 22)))
-                in_cloud_low = st.slider("Low cloud cover (%)", 0, 100,
-                                          value=int(medians.get("cloud_cover_low_pct", 0)))
+                in_cloud_total = st.number_input(
+                    "Total cloud cover (%)", min_value=0, max_value=100, step=5,
+                    value=int(medians.get("cloud_cover_total_pct", 22)),
+                )
+                in_cloud_low = st.number_input(
+                    "Low-altitude cloud cover (%)", min_value=0, max_value=100, step=5,
+                    value=int(medians.get("cloud_cover_low_pct", 0)),
+                    help="Clouds below ~6,500ft — most relevant for takeoff/landing visibility.",
+                )
 
             # ── Row 4 — operational state ──
-            st.markdown("<div class='section-title'>Operational State</div>", unsafe_allow_html=True)
+            st.markdown("<div class='section-title'>Airport &amp; aircraft status</div>", unsafe_allow_html=True)
             r4c1, r4c2, r4c3 = st.columns(3)
             with r4c1:
-                in_rolling6 = st.slider(
-                    "Rolling 6-flight origin delay avg (min)",
-                    -30.0, 120.0,
-                    value=float(medians.get("rolling_6_flight_origin_delay_avg", 4.0)), step=1.0,
-                    help="Average departure delay of the last 6 flights from this origin — "
-                         "proxy for current airport congestion.",
+                in_rolling6 = st.number_input(
+                    "Avg delay of last 6 flights from this airport (min)",
+                    min_value=-30.0, max_value=180.0, step=1.0,
+                    value=float(medians.get("rolling_6_flight_origin_delay_avg", 4.0)),
+                    help="How behind schedule the airport is running right now.",
                 )
             with r4c2:
-                in_lag1 = st.slider(
-                    "Lag-1 tail arr. delay (min)",
-                    -60.0, 180.0,
-                    value=float(medians.get("lag_1_tail_arr_delay_mins", -6.0)), step=1.0,
-                    help="Arrival delay of this tail number's previous flight — "
-                         "captures aircraft propagation chains.",
+                in_lag1 = st.number_input(
+                    "This aircraft's previous arrival delay (min)",
+                    min_value=-60.0, max_value=240.0, step=1.0,
+                    value=float(medians.get("lag_1_tail_arr_delay_mins", -6.0)),
+                    help="If the plane arrived late on its previous leg, it usually departs late too.",
                 )
             with r4c3:
+                st.write("")  # vertical spacing
                 in_wx_flag = st.checkbox(
-                    "Weather delay flagged in last 3 flights",
+                    "Recent flights disrupted by weather",
                     value=bool(int(medians.get("rolling_3_flight_weather_delay_flag", 0))),
-                    help="Any of the last 3 flights from this origin recorded weather-coded delay.",
                 )
 
-            submitted = st.form_submit_button("Compute Risk Score")
+            submitted = st.form_submit_button("Compute Risk Score", type="primary")
 
         # ── Prediction ──
         if submitted:
@@ -1968,6 +2126,8 @@ with tab_predict:
                 if cent_lookup is not None and ap in cent_lookup.index:
                     return float(cent_lookup.loc[ap, col])
                 return 0.0
+
+            in_dist = _haversine_miles(in_origin, in_dest)
 
             feat_values = {
                 "flight_month":                       int(in_month),
