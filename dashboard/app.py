@@ -1396,7 +1396,7 @@ with tab2:
                 )
 
             fig_rm.update_yaxes(tickformat=".0%", title="Delay Rate", gridcolor="#f1f5f9")
-            fig_rm.update_xaxes(title="PageRank (Network Importance)", type="log", gridcolor="#f1f5f9")
+            fig_rm.update_xaxes(title=dict(text="PageRank (Network Importance)", standoff=30), type="log", gridcolor="#f1f5f9")
             fig_rm = sf(fig_rm)
             fig_rm.update_layout(
                 title="Airport Risk Matrix — hover a dot to see airport details",
@@ -1701,17 +1701,8 @@ with tab_weather:
                 }
                 w_fi = w_fi.copy()
                 w_fi["feature"] = w_fi["feature"].map(label_map).fillna(w_fi["feature"])
-                total_weather = w_fi["importance"].sum()
-                c1, c2 = st.columns([1, 2])
-                with c1:
-                    st.markdown(f"""
-                    <div class="stat-card accent-blue">
-                      <div class="sc-label">Weather Features · Combined Importance</div>
-                      <div class="sc-value">{total_weather:.1%}</div>
-                      <div class="sc-sub">Share of Gradient Boosting<br>feature importance</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                with c2:
+                pad_l, c_mid, pad_r = st.columns([1, 4, 1])
+                with c_mid:
                     fig = px.bar(w_fi, x="importance", y="feature", orientation="h",
                                  color="importance",
                                  color_continuous_scale=["#bae6fd", C["blue"]],
@@ -1980,17 +1971,6 @@ with tab4:
                           title="Feature Importance — Gradient Boosting Model")
         st.plotly_chart(fig, use_container_width=True)
 
-    st.markdown("---")
-    st.markdown("<div class='section-title'>Evaluation Charts — Week 2 Analysis</div>", unsafe_allow_html=True)
-    eval_imgs = [("roc_curves.png","ROC Curves"),("confusion_matrices.png","Confusion Matrices"),
-                 ("feature_importance.png","Feature Importance"),("model_comparison.png","Model Comparison")]
-    for i in range(0, len(eval_imgs), 2):
-        cols = st.columns(2)
-        for j, col in enumerate(cols):
-            if i+j < len(eval_imgs):
-                fname, caption = eval_imgs[i+j]
-                p = CACHE / fname
-                if p.exists(): col.image(str(p), caption=caption, use_container_width=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
