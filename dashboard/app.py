@@ -532,7 +532,14 @@ def load_prediction_artifacts():
             feat_cols = json.load(fh)
         with open(MODELS_DIR / "feature_medians.json") as fh:
             medians = json.load(fh)
-        return {"model": model, "feat_cols": feat_cols, "medians": medians}
+        regressor = None
+        reg_path = MODELS_DIR / "gradient_boosting_regressor.joblib"
+        if reg_path.exists():
+            try:
+                regressor = joblib.load(reg_path)
+            except Exception as e:
+                print(f"[predict] regressor load failed: {e}")
+        return {"model": model, "feat_cols": feat_cols, "medians": medians, "regressor": regressor}
     except Exception as e:
         print(f"[predict] artifact load failed: {e}")
         return None
@@ -676,7 +683,7 @@ st.markdown(f"""
   <div class="stat-card accent-red">
     <div class="sc-label">High-Risk Flights</div>
     <div class="sc-value">{"—" if not scores_ready else f"{high_risk_n:,}"}</div>
-    <div class="sc-sub">{"Run scoring script first" if not scores_ready else f"Score ≥ 60%"}</div>
+    <div class="sc-sub">{"Run scoring script first" if not scores_ready else f"Score ≥ 0.60"}</div>
   </div>
   <div class="stat-card accent-green">
     <div class="sc-label">Airports in Network</div>
@@ -1447,17 +1454,17 @@ with tab3:
         st.markdown(f"""
         <div class="stat-row">
           <div class="stat-card accent-green">
-            <div class="sc-label">Low Risk  &lt;30%</div>
+            <div class="sc-label">Low Risk  &lt;0.30</div>
             <div class="sc-value">{low_n:,}</div>
             <div class="sc-sub">{low_n/max(total_r,1):.1%} of filtered flights</div>
           </div>
           <div class="stat-card accent-amber">
-            <div class="sc-label">Medium Risk  30–60%</div>
+            <div class="sc-label">Medium Risk  0.30–0.60</div>
             <div class="sc-value">{med_n:,}</div>
             <div class="sc-sub">{med_n/max(total_r,1):.1%} of filtered flights</div>
           </div>
           <div class="stat-card accent-red">
-            <div class="sc-label">High Risk  &gt;60%</div>
+            <div class="sc-label">High Risk  &gt;0.60</div>
             <div class="sc-value">{hi_n:,}</div>
             <div class="sc-sub">{hi_n/max(total_r,1):.1%} of filtered flights</div>
           </div>
@@ -1959,6 +1966,9 @@ with tab4:
             "wind_speed_knots":                   "Wind speed (knots)",
             "cloud_cover_low_pct":                "Low cloud cover (%)",
             "wind_speed_delta":                   "Wind speed change",
+            "dest_prev_hour_delay_avg":           "Destination delay avg (prev hour)",
+            "dest_prev_hour_flight_count":        "Destination flight count (prev hour)",
+            "dest_betweenness":                   "Destination betweenness centrality",
         }
         fi = fi.copy()
         fi["feature"] = fi["feature"].map(feat_label_map).fillna(fi["feature"])
@@ -2003,6 +2013,7 @@ with tab_predict:
         model     = artifacts["model"]
         feat_cols = artifacts["feat_cols"]
         medians   = artifacts["medians"]
+        regressor = artifacts.get("regressor")
 
         airport_options = (sorted(cent_df["airport"].tolist())
                            if not cent_df.empty else
@@ -2146,6 +2157,7 @@ with tab_predict:
                 "origin_pagerank":                    _get_cent(in_origin, "pagerank"),
                 "origin_betweenness":                 _get_cent(in_origin, "betweenness"),
                 "dest_pagerank":                      _get_cent(in_dest, "pagerank"),
+                "dest_betweenness":                   _get_cent(in_dest, "betweenness"),
             }
 
             X_row = pd.DataFrame(
@@ -2153,6 +2165,7 @@ with tab_predict:
                 columns=feat_cols, dtype=float,
             )
             prob = float(model.predict_proba(X_row.values)[0, 1])
+            pred_minutes = float(regressor.predict(X_row.values)[0]) if regressor is not None else None
 
             if prob < 0.3:
                 band, band_color, band_icon = "Low", C["green"], "✓"
@@ -2166,12 +2179,19 @@ with tab_predict:
 
             k1, k2, k3 = st.columns([1.2, 1, 1])
             with k1:
+                pred_min_html = ""
+                if pred_minutes is not None:
+                    sign = "+" if pred_minutes >= 0 else ""
+                    pred_min_html = (
+                        f"<div class='sc-sub' style='margin-top:.25rem'>"
+                        f"Predicted delay: <b>{sign}{pred_minutes:.1f} min</b></div>"
+                    )
                 st.markdown(f"""
                 <div class="stat-card" style="border-top:3px solid {band_color}">
                   <div class="sc-label">Risk Score · {in_origin} → {in_dest}</div>
-                  <div class="sc-value" style="color:{band_color}">{prob:.1%}</div>
-                  <div class="sc-sub">{band_icon} <b style="color:{band_color}">{band} Risk</b>
-                    · P(delay &gt; 15 min)</div>
+                  <div class="sc-value" style="color:{band_color}">{prob:.3f}</div>
+                  <div class="sc-sub">{band_icon} <b style="color:{band_color}">{band} Risk</b></div>
+                  {pred_min_html}
                 </div>
                 """, unsafe_allow_html=True)
             with k2:
@@ -2194,20 +2214,20 @@ with tab_predict:
             # Gauge
             fig = go.Figure(go.Indicator(
                 mode="gauge+number",
-                value=prob * 100,
-                number={"suffix": "%", "font": {"color": C["text"], "size": 34}},
+                value=prob,
+                number={"font": {"color": C["text"], "size": 34}, "valueformat": ".3f"},
                 gauge={
-                    "axis": {"range": [0, 100], "tickcolor": C["muted"], "tickfont": {"color": C["muted"]}},
+                    "axis": {"range": [0, 1], "tickcolor": C["muted"], "tickfont": {"color": C["muted"]}},
                     "bar": {"color": band_color, "thickness": 0.28},
                     "bgcolor": C["card"],
                     "borderwidth": 0,
                     "steps": [
-                        {"range": [0, 30],  "color": "rgba(5,150,105,.18)"},
-                        {"range": [30, 60], "color": "rgba(217,119,6,.18)"},
-                        {"range": [60, 100], "color": "rgba(220,38,38,.18)"},
+                        {"range": [0, 0.3],  "color": "rgba(5,150,105,.18)"},
+                        {"range": [0.3, 0.6], "color": "rgba(217,119,6,.18)"},
+                        {"range": [0.6, 1.0], "color": "rgba(220,38,38,.18)"},
                     ],
                     "threshold": {"line": {"color": C["text"], "width": 2},
-                                   "thickness": 0.75, "value": prob * 100},
+                                   "thickness": 0.75, "value": prob},
                 },
             ))
             fig.update_layout(paper_bgcolor=C["card"], font={"color": C["text"]},
@@ -2253,7 +2273,7 @@ with tab_predict:
                               height=420)
             st.plotly_chart(fig, use_container_width=True)
 
-            with st.expander("Full input feature vector"):
+            with st.expander("Full input feature vector", expanded=True):
                 show = pd.DataFrame({
                     "feature":  feat_cols,
                     "input":    [float(X_row.iloc[0][c]) for c in feat_cols],

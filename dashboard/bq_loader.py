@@ -75,7 +75,7 @@ def load_kpis(months=None, airlines=None, airports=None, date_range=None) -> Opt
     w = _where(months, airlines, airports, date_range, extra=None)
     sql = f"""
     SELECT
-      COUNTIF(Cancelled != 1.0)                                       AS total_flights,
+      COUNT(*)                                                        AS total_flights,
       COUNTIF(Cancelled = 1.0)                                        AS cancelled,
       COUNTIF(DepDelay > 15 AND Cancelled != 1.0)                     AS delayed,
       SAFE_DIVIDE(
