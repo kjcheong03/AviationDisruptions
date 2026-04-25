@@ -16,6 +16,3 @@ python scripts/generate_risk_scores.py
 # 3. Launch the dashboard
 streamlit run dashboard/app.py
 ```
-
-Airflow UI: `http://localhost:8080` (admin/admin)
-Streamlit UI: `http://localhost:8501`
