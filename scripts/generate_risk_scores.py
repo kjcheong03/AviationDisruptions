@@ -20,11 +20,11 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from google.cloud import bigquery
 from google.oauth2 import service_account
-from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import roc_auc_score, accuracy_score, f1_score
+from sklearn.metrics import roc_auc_score, accuracy_score, f1_score, mean_absolute_error
 
 ROOT      = Path(__file__).parent.parent
 CACHE     = ROOT / "eda" / "cache"
@@ -53,7 +53,8 @@ FEATURE_COLS = [
     "cloud_cover_total_pct", "cloud_cover_low_pct",
     "rolling_6_flight_origin_delay_avg", "rolling_3_flight_weather_delay_flag",
     "wind_speed_delta", "lag_1_tail_arr_delay_mins",
-    "origin_pagerank", "origin_betweenness", "dest_pagerank",
+    "dest_prev_hour_delay_avg", "dest_prev_hour_flight_count",
+    "origin_pagerank", "origin_betweenness", "dest_pagerank", "dest_betweenness",
 ]
 
 
@@ -105,6 +106,8 @@ def load_from_bigquery(client: bigquery.Client, sample_pct: int = 20) -> pd.Data
         COALESCE(rolling_6_flight_origin_delay_avg, 0) AS rolling_6_flight_origin_delay_avg,
         COALESCE(wind_speed_delta,                  0) AS wind_speed_delta,
         COALESCE(rolling_3_flight_weather_delay_flag,0) AS rolling_3_flight_weather_delay_flag,
+        COALESCE(dest_prev_hour_delay_avg,          0) AS dest_prev_hour_delay_avg,
+        COALESCE(dest_prev_hour_flight_count,       0) AS dest_prev_hour_flight_count,
 
         -- targets
         dep_delay_minutes,
@@ -169,6 +172,7 @@ def add_centrality(df: pd.DataFrame, centrality: pd.DataFrame) -> pd.DataFrame:
     df["origin_pagerank"]    = df["Origin"].map(cent["pagerank"]).fillna(0)
     df["origin_betweenness"] = df["Origin"].map(cent["betweenness"]).fillna(0)
     df["dest_pagerank"]      = df["Dest"].map(cent["pagerank"]).fillna(0)
+    df["dest_betweenness"]   = df["Dest"].map(cent["betweenness"]).fillna(0)
     return df
 
 
@@ -227,6 +231,18 @@ def train_models(df: pd.DataFrame):
     )
     joblib.dump(gb, MODELS / "gradient_boosting.joblib")
     print(f"    AUC={results['Gradient Boosting']['auc']:.4f}")
+
+    print("  [Regressor] Gradient Boosting Regressor (predicting delay minutes)…")
+    y_minutes = df["dep_delay_minutes"].clip(-720, 720).astype(float)
+    y_min_train = y_minutes.loc[X_train.index]
+    y_min_test  = y_minutes.loc[X_test.index]
+    gb_reg = GradientBoostingRegressor(n_estimators=200, max_depth=5, learning_rate=0.1,
+                                        random_state=42)
+    gb_reg.fit(X_train, y_min_train)
+    pred_min = gb_reg.predict(X_test)
+    mae = mean_absolute_error(y_min_test, pred_min)
+    joblib.dump(gb_reg, MODELS / "gradient_boosting_regressor.joblib")
+    print(f"    MAE={mae:.2f} minutes")
 
     with open(MODELS / "feature_cols.json", "w") as fh:
         json.dump(FEATURE_COLS, fh)

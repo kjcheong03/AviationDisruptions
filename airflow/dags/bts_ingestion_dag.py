@@ -43,18 +43,27 @@ def download_and_load_bts(**context) -> None:
     """Download the BTS ZIP for the logical month and load to BigQuery."""
     from datetime import timedelta
     from bts_pipeline import _download_and_parse, _load_to_bigquery
+    from google.cloud import bigquery
+    from airflow.exceptions import AirflowSkipException
 
-    # Fetch December 2025 (safely within BTS published range)
     year, month = 2025, 12
+
+    client = bigquery.Client(project="is3107-aviation-pipeline")
+    check_sql = f"""
+        SELECT COUNT(*) AS n FROM `is3107-aviation-pipeline.raw_aviation.bts_raw`
+        WHERE EXTRACT(YEAR FROM CAST(flightdate AS DATE)) = {year}
+          AND EXTRACT(MONTH FROM CAST(flightdate AS DATE)) = {month}
+    """
+    existing = list(client.query(check_sql).result())[0]["n"]
+    if existing > 0:
+        raise AirflowSkipException(f"BTS {year}-{month:02d} already loaded ({existing:,} rows). Skipping.")
 
     print(f"Processing BTS data for {year}-{month:02d}")
     df = _download_and_parse(year, month)
 
     if df is None or df.empty:
-        from airflow.exceptions import AirflowSkipException
-        raise AirflowSkipException(f"BTS data for {year}-{month:02d} not yet published — skipping.")
+        raise AirflowSkipException(f"BTS data for {year}-{month:02d} not yet published.")
 
-    # Always APPEND for scheduled runs; the pipeline deduplicates via BQ partitioning
     _load_to_bigquery(df, write_mode="APPEND")
     print(f"Loaded {len(df):,} rows for {year}-{month:02d}")
 
