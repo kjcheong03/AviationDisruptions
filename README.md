@@ -10,7 +10,7 @@ Requires Docker Desktop, Python 3.10+, and a GCP service account key at `dbt/gcp
 # 1. Start Airflow + Postgres + dbt containers
 docker compose up -d
 
-# 2. Train models and generate risk scores (~30 min)
+# 2. Train models and generate risk scores 
 python scripts/generate_risk_scores.py
 
 # 3. Launch the dashboard

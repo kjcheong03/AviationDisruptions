@@ -934,7 +934,7 @@ with tab1:
             al_df = al_df.copy()
             al_df["airline_name"] = al_df[y_col].map(lambda c: AIRLINE_NAMES.get(c, c))
             fig = px.bar(al_df, x=x_col, y=y_col, orientation="h",
-                         color=x_col, color_continuous_scale=[C["green"], C["amber"], C["red"]],
+                         color_discrete_sequence=[C["blue"]],
                          labels={x_col:"Delay Rate", y_col:"Airline"},
                          custom_data=["airline_name"])
             fig.update_traces(
@@ -961,7 +961,7 @@ with tab1:
             ap_df = ap_df.copy()
             ap_df["airport_name"] = ap_df[y_col].map(lambda c: AIRPORT_NAMES.get(c, c))
             fig = px.bar(ap_df, x="delay_rate", y=y_col, orientation="h",
-                         color="delay_rate", color_continuous_scale=[C["green"], C["amber"], C["red"]],
+                         color_discrete_sequence=[C["blue"]],
                          labels={"delay_rate":"Delay Rate", y_col:"Airport"},
                          custom_data=["airport_name"])
             fig.update_traces(
